@@ -36,7 +36,7 @@ __author_email__ = "biziqe@mathieu.fenniak.net"
 
 import re
 from .utils import readNonWhitespace, RC4_encrypt
-from .utils import b_, u_, chr_, ord_
+from .utils import , u_, chr_, ord_
 from .utils import PdfStreamError
 import warnings
 from . import filters
@@ -48,44 +48,44 @@ import codecs
 def readObject(stream, pdf):
     tok = stream.read(1)
     stream.seek(-1, 1) # reset to start
-    if tok == b_('t') or tok == b_('f'):
+    if tok == 't' or tok == 'f':
         # boolean object
         return BooleanObject.readFromStream(stream)
-    elif tok == b_('('):
+    elif tok == '(':
         # string object
         return readStringFromStream(stream)
-    elif tok == b_('/'):
+    elif tok == '/':
         # name object
         return NameObject.readFromStream(stream, pdf)
-    elif tok == b_('['):
+    elif tok == '[':
         # array object
         return ArrayObject.readFromStream(stream, pdf)
-    elif tok == b_('n'):
+    elif tok == 'n':
         # null object
         return NullObject.readFromStream(stream)
-    elif tok == b_('<'):
+    elif tok == '<':
         # hexadecimal string OR dictionary
         peek = stream.read(2)
         stream.seek(-2, 1) # reset to start
-        if peek == b_('<<'):
+        if peek == '<<':
             return DictionaryObject.readFromStream(stream, pdf)
         else:
             return readHexStringFromStream(stream)
-    elif tok == b_('%'):
+    elif tok == '%':
         # comment
-        while tok not in (b_('\r'), b_('\n')):
+        while tok not in ('\r', '\n'):
             tok = stream.read(1)
         tok = readNonWhitespace(stream)
         stream.seek(-1, 1)
         return readObject(stream, pdf)
     else:
         # number object OR indirect reference
-        if tok == b_('+') or tok == b_('-'):
+        if tok == '+' or tok == '-':
             # number
             return NumberObject.readFromStream(stream)
         peek = stream.read(20)
         stream.seek(-len(peek), 1) # reset to start
-        if re.match(b_(r"(\d+)\s+(\d+)\s+R[^a-zA-Z]"), peek) != None:
+        if re.match(r"(\d+)\s+(\d+)\s+R[^a-zA-Z]", peek) != None:
             return IndirectObject.readFromStream(stream, pdf)
         else:
             return NumberObject.readFromStream(stream)
@@ -98,11 +98,11 @@ class PdfObject(object):
 
 class NullObject(PdfObject):
     def writeToStream(self, stream, encryption_key):
-        stream.write(b_("null"))
+        stream.write("null")
 
     def readFromStream(stream):
         nulltxt = stream.read(4)
-        if nulltxt != b_("null"):
+        if nulltxt != "null":
             raise utils.PdfReadError("Could not read Null object")
         return NullObject()
     readFromStream = staticmethod(readFromStream)
@@ -114,15 +114,15 @@ class BooleanObject(PdfObject):
 
     def writeToStream(self, stream, encryption_key):
         if self.value:
-            stream.write(b_("true"))
+            stream.write("true")
         else:
-            stream.write(b_("false"))
+            stream.write("false")
 
     def readFromStream(stream):
         word = stream.read(4)
-        if word == b_("true"):
+        if word == "true":
             return BooleanObject(True)
-        elif word == b_("fals"):
+        elif word == "fals":
             stream.read(1)
             return BooleanObject(False)
         else:
@@ -132,16 +132,16 @@ class BooleanObject(PdfObject):
 
 class ArrayObject(list, PdfObject):
     def writeToStream(self, stream, encryption_key):
-        stream.write(b_("["))
+        stream.write("[")
         for data in self:
-            stream.write(b_(" "))
+            stream.write(" ")
             data.writeToStream(stream, encryption_key)
-        stream.write(b_(" ]"))
+        stream.write(" ]")
 
     def readFromStream(stream, pdf):
         arr = ArrayObject()
         tmp = stream.read(1)
-        if tmp != b_("["):
+        if tmp != "[":
             raise utils.PdfReadError("Could not read array")
         while True:
             # skip leading whitespace
@@ -151,7 +151,7 @@ class ArrayObject(list, PdfObject):
             stream.seek(-1, 1)
             # check for array ending
             peekahead = stream.read(1)
-            if peekahead == b_("]"):
+            if peekahead == "]":
                 break
             stream.seek(-1, 1)
             # read and append obj
@@ -185,10 +185,10 @@ class IndirectObject(PdfObject):
         return not self.__eq__(other)
 
     def writeToStream(self, stream, encryption_key):
-        stream.write(b_("%s %s R" % (self.idnum, self.generation)))
+        stream.write("%s %s R" % (self.idnum, self.generation))
 
     def readFromStream(stream, pdf):
-        idnum = b_("")
+        idnum = ""
         while True:
             tok = stream.read(1)
             if not tok:
@@ -197,7 +197,7 @@ class IndirectObject(PdfObject):
             if tok.isspace():
                 break
             idnum += tok
-        generation = b_("")
+        generation = ""
         while True:
             tok = stream.read(1)
             if not tok:
@@ -209,7 +209,7 @@ class IndirectObject(PdfObject):
                 break
             generation += tok
         r = readNonWhitespace(stream)
-        if r != b_("R"):
+        if r != "R":
             raise utils.PdfReadError("Error reading indirect object reference at byte %s" % utils.hexStr(stream.tell()))
         return IndirectObject(int(idnum), int(generation), pdf)
     readFromStream = staticmethod(readFromStream)
@@ -227,34 +227,34 @@ class FloatObject(decimal.Decimal, PdfObject):
         else:
             # XXX: this adds useless extraneous zeros.
             return "%.5f" % self
-            
+
     def as_numeric(self):
-        return float(b_(repr(self)))
-        
+        return float(repr(self))
+
     def writeToStream(self, stream, encryption_key):
-        stream.write(b_(repr(self)))
+        stream.write(repr(self))
 
 
 class NumberObject(int, PdfObject):
-    
+
     def __new__(cls, value):
         return int.__new__(cls, value)
-            
+
     def as_numeric(self):
-        return int(b_(repr(self)))
+        return int(repr(self))
 
     def writeToStream(self, stream, encryption_key):
-        stream.write(b_(repr(self)))
+        stream.write(repr(self))
 
     def readFromStream(stream):
-        num = b_("")
+        num = ""
         while True:
             tok = stream.read(1)
-            if tok != b_('+') and tok != b_('-') and tok != b_('.') and not tok.isdigit():
+            if tok != '+' and tok != '-' and tok != '.' and not tok.isdigit():
                 stream.seek(-1, 1)
                 break
             num += tok
-        if num.find(b_(".")) != -1:
+        if num.find(".") != -1:
             return FloatObject(num)
         else:
             return NumberObject(num)
@@ -290,61 +290,61 @@ def createStringObject(string):
 def readHexStringFromStream(stream):
     stream.read(1)
     txt = ""
-    x = b_("")
+    x = ""
     while True:
         tok = readNonWhitespace(stream)
         if not tok:
             # stream has truncated prematurely
             raise PdfStreamError("Stream has ended unexpectedly")
-        if tok == b_(">"):
+        if tok == ">":
             break
         x += tok
         if len(x) == 2:
             txt += chr(int(x, base=16))
-            x = b_("")
+            x = ""
     if len(x) == 1:
-        x += b_("0")
+        x += "0"
     if len(x) == 2:
         txt += chr(int(x, base=16))
-    return createStringObject(b_(txt))
+    return createStringObject(txt)
 
 
 def readStringFromStream(stream):
     tok = stream.read(1)
     parens = 1
-    txt = b_("")
+    txt = ""
     while True:
         tok = stream.read(1)
         if not tok:
             # stream has truncated prematurely
             raise PdfStreamError("Stream has ended unexpectedly")
-        if tok == b_("("):
+        if tok == "(":
             parens += 1
-        elif tok == b_(")"):
+        elif tok == ")":
             parens -= 1
             if parens == 0:
                 break
-        elif tok == b_("\\"):
+        elif tok == "\\":
             tok = stream.read(1)
-            if tok == b_("n"):
-                tok = b_("\n")
-            elif tok == b_("r"):
-                tok = b_("\r")
-            elif tok == b_("t"):
-                tok = b_("\t")
-            elif tok == b_("b"):
-                tok = b_("\b")
-            elif tok == b_("f"):
-                tok = b_("\f")
-            elif tok == b_("("):
-                tok = b_("(")
-            elif tok == b_(")"):
-                tok = b_(")")
-            elif tok == b_("\\"):
-                tok = b_("\\")
-            elif tok in (b_(" "), b_("/"), b_("%"), b_("<"), b_(">"), b_("["), b_("]")):
+            if tok == "n":
+                tok = "\n"
+            elif tok == "r":
+                tok = "\r"
+            elif tok == "t":
+                tok = "\t"
+            elif tok == "b":
+                tok = "\b"
+            elif tok == "f":
+                tok = "\f"
+            elif tok == "(":
+                tok = "("
+            elif tok == ")":
+                tok = ")"
+            elif tok == "\\":
+                tok = "\\"
+            elif tok in (" ", "/", "%", "<", ">", "[", "]"):
                 # odd/unnessecary escape sequences we have encountered
-                tok = b_(tok)
+                tok = tok
             elif tok.isdigit():
                 # "The number ddd may consist of one, two, or three
                 # octal digits; high-order overflow shall be ignored.
@@ -357,17 +357,17 @@ def readStringFromStream(stream):
                         tok += ntok
                     else:
                         break
-                tok = b_(chr(int(tok, base=8)))
-            elif tok in b_("\n\r"):
+                tok = chr(int(tok, base=8))
+            elif tok in "\n\r":
                 # This case is  hit when a backslash followed by a line
                 # break occurs.  If it's a multi-char EOL, consume the
                 # second character:
                 tok = stream.read(1)
-                if not tok in b_("\n\r"):
+                if not tok in "\n\r":
                     stream.seek(-1, 1)
                 # Then don't add anything to the actual string, since this
                 # line break was escaped:
-                tok = b_('')
+                tok = ''
             else:
                 raise utils.PdfReadError("Unexpected escaped string")
         txt += tok
@@ -390,9 +390,9 @@ class ByteStringObject(utils.bytes_type, PdfObject):
         bytearr = self
         if encryption_key:
             bytearr = RC4_encrypt(encryption_key, bytearr)
-        stream.write(b_("<"))
+        stream.write("<")
         stream.write(utils.hexencode(bytearr))
-        stream.write(b_(">"))
+        stream.write(">")
 
 
 ##
@@ -437,29 +437,29 @@ class TextStringObject(utils.string_type, PdfObject):
             obj = ByteStringObject(bytearr)
             obj.writeToStream(stream, None)
         else:
-            stream.write(b_("("))
+            stream.write("(")
             for c in bytearr:
-                if not chr_(c).isalnum() and c != b_(' '):
-                    stream.write(b_("\\%03o" % ord_(c)))
+                if not chr_(c).isalnum() and c != ' ':
+                    stream.write("\\%03o" % ord_(c))
                 else:
-                    stream.write(b_(chr_(c)))
-            stream.write(b_(")"))
+                    stream.write(chr_(c))
+            stream.write(")")
 
 
 class NameObject(str, PdfObject):
-    delimiterCharacters = b_("("), b_(")"), b_("<"), b_(">"), b_("["), b_("]"), b_("{"), b_("}"), b_("/"), b_("%")
+    delimiterCharacters = "(", ")", "<", ">", "[", "]", "{", "}", "/", "%"
 
     def __init__(self, data):
         str.__init__(super(NameObject, self).__new__(str, data))
 
     def writeToStream(self, stream, encryption_key):
-        stream.write(b_(self))
+        stream.write(self)
 
     def readFromStream(stream, pdf):
         debug = False
         if debug: print((stream.tell()))
         name = stream.read(1)
-        if name != b_("/"):
+        if name != "/":
             raise utils.PdfReadError("name read error")
         while True:
             tok = stream.read(1)
@@ -481,7 +481,7 @@ class NameObject(str, PdfObject):
                 return NameObject(name)
             else:
                 raise utils.PdfReadError("Illegal character in Name Object")
-        
+
     readFromStream = staticmethod(readFromStream)
 
 
@@ -555,30 +555,30 @@ class DictionaryObject(dict, PdfObject):
     xmpMetadata = property(lambda self: self.getXmpMetadata(), None, None)
 
     def writeToStream(self, stream, encryption_key):
-        stream.write(b_("<<\n"))
+        stream.write("<<\n")
         for key, value in list(self.items()):
             key.writeToStream(stream, encryption_key)
-            stream.write(b_(" "))
+            stream.write(" ")
             value.writeToStream(stream, encryption_key)
-            stream.write(b_("\n"))
-        stream.write(b_(">>"))
+            stream.write("\n")
+        stream.write(">>")
 
     def readFromStream(stream, pdf):
         debug = False
         tmp = stream.read(2)
-        if tmp != b_("<<"):
+        if tmp != "<<":
             raise utils.PdfReadError("Dictionary read error at byte %s: stream must begin with '<<'" % utils.hexStr(stream.tell()))
         data = {}
         while True:
             tok = readNonWhitespace(stream)
-            if tok == b_('\x00'):
+            if tok == '\x00':
                 continue
             if not tok:
                 # stream has truncated prematurely
                 raise PdfStreamError("Stream has ended unexpectedly")
 
             if debug: print(("Tok:", tok))
-            if tok == b_(">"):
+            if tok == ">":
                 stream.read(1)
                 break
             stream.seek(-1, 1)
@@ -598,16 +598,16 @@ class DictionaryObject(dict, PdfObject):
 
         pos = stream.tell()
         s = readNonWhitespace(stream)
-        if s == b_('s') and stream.read(5) == b_('tream'):
+        if s == 's' and stream.read(5) == 'tream':
             eol = stream.read(1)
             # odd PDF file output has spaces after 'stream' keyword but before EOL.
             # patch provided by Danial Sandler
-            while eol == b_(' '):
+            while eol == ' ':
                 eol = stream.read(1)
-            assert eol in (b_("\n"), b_("\r"))
-            if eol == b_("\r"):
+            assert eol in ("\n", "\r")
+            if eol == "\r":
                 # read \n after
-                if stream.read(1)  != b_('\n'):
+                if stream.read(1)  != '\n':
                     stream.seek(-1, 1)
             # this is a stream object, not a dictionary
             assert "/Length" in data
@@ -622,7 +622,7 @@ class DictionaryObject(dict, PdfObject):
             #if debug: print(binascii.hexlify(data["__streamdata__"]))
             e = readNonWhitespace(stream)
             ndstream = stream.read(8)
-            if (e + ndstream) != b_("endstream"):
+            if (e + ndstream) != "endstream":
                 # (sigh) - the odd PDF file has a length that is too long, so
                 # we need to read backwards to find the "endstream" ending.
                 # ReportLab (unknown version) generates files with this bug,
@@ -632,7 +632,7 @@ class DictionaryObject(dict, PdfObject):
                 pos = stream.tell()
                 stream.seek(-10, 1)
                 end = stream.read(9)
-                if end == b_("endstream"):
+                if end == "endstream":
                     # we found it by looking back one character further.
                     data["__streamdata__"] = data["__streamdata__"][:-1]
                 else:
@@ -652,29 +652,29 @@ class DictionaryObject(dict, PdfObject):
 class TreeObject(DictionaryObject):
     def __init__(self):
         DictionaryObject.__init__(self)
-        
+
     def hasChildren(self):
         return '/First' in self
-    
+
     def __iter__(self):
         return self.children()
-        
+
     def children(self):
         if not self.hasChildren():
             raise StopIteration
-            
+
         child = self['/First']
         while True:
             yield child
             if child == self['/Last']:
                 raise StopIteration
             child = child['/Next']
-        
+
     def addChild(self, child, pdf):
         childObj = child.getObject()
         child = pdf.getReference(childObj)
         assert isinstance(child, IndirectObject)
-        
+
         if '/First' not in self:
             self[NameObject('/First')] = child
             self[NameObject('/Count')] = NumberObject(0)
@@ -694,22 +694,22 @@ class TreeObject(DictionaryObject):
         parentRef = pdf.getReference(self)
         assert isinstance(parentRef, IndirectObject)
         childObj[NameObject('/Parent')] = parentRef
-        
+
     def removeChild(self, child):
         childObj = child.getObject()
-        
+
         if NameObject('/Parent') not in childObj:
             raise ValueError("Removed child does not appear to be a tree item")
         elif childObj[NameObject('/Parent')] != self:
             raise ValueError("Removed child is not a member of this tree")
-        
+
         found = False
         prevRef = None
         prev = None
         curRef = self[NameObject('/First')]
         cur = curRef.getObject()
         lastRef = self[NameObject('/Last')]
-        last = lastRef.getObject() 
+        last = lastRef.getObject()
         while cur != None:
             if cur == childObj:
                 if prev == None:
@@ -720,7 +720,7 @@ class TreeObject(DictionaryObject):
                         del next[NameObject('/Prev')]
                         self[NameObject('/First')] = nextRef
                         self[NameObject('/Count')] = self[NameObject('/Count')] - 1
-                        
+
                     else:
                         # Removing only tree node
                         assert self[NameObject('/Count')] == 1
@@ -743,9 +743,9 @@ class TreeObject(DictionaryObject):
                         self[NameObject('/Last')] = prevRef
                         self[NameObject('/Count')] = self[NameObject('/Count')] - 1
                 found = True
-                break        
-                    
-            
+                break
+
+
             prevRef = curRef
             prev = cur
             if NameObject('/Next') in cur:
@@ -754,10 +754,10 @@ class TreeObject(DictionaryObject):
             else:
                 curRef = None
                 cur = None
-       
+
         if not found:
             raise ValueError("Removal couldn't find item in tree")
-       
+
         del childObj[NameObject('/Parent')]
         if NameObject('/Next') in childObj:
             del childObj[NameObject('/Next')]
@@ -790,12 +790,12 @@ class StreamObject(DictionaryObject):
         self[NameObject("/Length")] = NumberObject(len(self._data))
         DictionaryObject.writeToStream(self, stream, encryption_key)
         del self["/Length"]
-        stream.write(b_("\nstream\n"))
+        stream.write("\nstream\n")
         data = self._data
         if encryption_key:
             data = RC4_encrypt(encryption_key, data)
         stream.write(data)
-        stream.write(b_("\nendstream"))
+        stream.write("\nendstream")
 
     def initializeFromDictionary(data):
         if "/Filter" in data:
@@ -846,7 +846,7 @@ class EncodedStreamObject(StreamObject):
         else:
             # create decoded object
             decoded = DecodedStreamObject()
-            
+
             decoded._data = filters.decodeStreamData(self)
             for key, value in list(self.items()):
                 if not key in ("/Length", "/Filter", "/DecodeParms"):
@@ -887,7 +887,7 @@ class RectangleObject(ArrayObject):
 
     def getUpperLeft_x(self):
         return self.getLowerLeft_x()
-    
+
     def getUpperLeft_y(self):
         return self.getUpperRight_y()
 
@@ -943,7 +943,7 @@ class Destination(TreeObject):
         self[NameObject("/Title")] = title
         self[NameObject("/Page")] = page
         self[NameObject("/Type")] = typ
-        
+
         # from table 8.2 of the PDF 1.6 reference.
         if typ == "/XYZ":
             (self[NameObject("/Left")], self[NameObject("/Top")],
@@ -959,27 +959,27 @@ class Destination(TreeObject):
             pass
         else:
             raise utils.PdfReadError("Unknown Destination Type: %r" % typ)
-            
+
     def getDestArray(self):
         return ArrayObject([self.raw_get('/Page'), self['/Type']] + [self[x] for x in ['/Left', '/Bottom', '/Right', '/Top', '/Zoom'] if x in self])
-        
+
     def writeToStream(self, stream, encryption_key):
-        stream.write(b_("<<\n"))
+        stream.write("<<\n")
         key = NameObject('/D')
         key.writeToStream(stream, encryption_key)
-        stream.write(b_(" "))
+        stream.write(" ")
         value = self.getDestArray()
         value.writeToStream(stream, encryption_key)
 
         key = NameObject("/S")
         key.writeToStream(stream, encryption_key)
-        stream.write(b_(" "))
+        stream.write(" ")
         value = NameObject("/GoTo")
         value.writeToStream(stream, encryption_key)
-        
-        stream.write(b_("\n"))
-        stream.write(b_(">>"))
-         
+
+        stream.write("\n")
+        stream.write(">>")
+
     ##
     # Read-only property accessing the destination title.
     # @return A string.
@@ -1019,31 +1019,31 @@ class Destination(TreeObject):
     # Read-only property accessing the bottom vertical coordinate.
     # @return A number, or None if not available.
     bottom = property(lambda self: self.get("/Bottom", None))
-        
+
 
 class Bookmark(Destination):
     def writeToStream(self, stream, encryption_key):
-        stream.write(b_("<<\n"))
+        stream.write("<<\n")
         for key in [NameObject(x) for x in ['/Title', '/Parent', '/First', '/Last', '/Next', '/Prev'] if x in self]:
             key.writeToStream(stream, encryption_key)
-            stream.write(b_(" "))
+            stream.write(" ")
             value = self.raw_get(key)
             value.writeToStream(stream, encryption_key)
-            stream.write(b_("\n"))
+            stream.write("\n")
         key = NameObject('/Dest')
         key.writeToStream(stream, encryption_key)
-        stream.write(b_(" "))
+        stream.write(" ")
         value = self.getDestArray()
         value.writeToStream(stream, encryption_key)
-        stream.write(b_("\n"))
-        stream.write(b_(">>"))
-        
- 
+        stream.write("\n")
+        stream.write(">>")
+
+
 def encode_pdfdocencoding(unicode_string):
-    retval = b_('')
+    retval = ''
     for c in unicode_string:
         try:
-            retval += b_(chr(_pdfDocEncoding_rev[c]))
+            retval += chr(_pdfDocEncoding_rev[c])
         except KeyError:
             raise UnicodeEncodeError("pdfdocencoding", c, -1, -1,
                     "does not exist in translation table")

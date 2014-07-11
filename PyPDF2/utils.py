@@ -61,7 +61,7 @@ def readUntilWhitespace(stream, maxchars=None):
     Reads non-whitespace characters and returns them.
     Stops upon encountering whitespace or when maxchars is reached.
     """
-    txt = b_("")
+    txt = ""
     while True:
         tok = stream.read(1)
         if tok.isspace() or not tok:
@@ -75,7 +75,7 @@ def readNonWhitespace(stream):
     """
     Finds and reads the next non-whitespace character (ignores whitespace).
     """
-    tok = b_(' ')
+    tok = ' '
     while tok in WHITESPACES:
         tok = stream.read(1)
     return tok
@@ -85,7 +85,7 @@ def skipOverWhitespace(stream):
     Similar to readNonWhitespace, but returns a Boolean if more than
     one whitespace character was read.
     """
-    tok = b_(' ')
+    tok = ' '
     cnt = 0;
     while tok in WHITESPACES:
         tok = stream.read(1)
@@ -95,8 +95,8 @@ def skipOverWhitespace(stream):
 def skipOverComment(stream):
     tok = stream.read(1)
     stream.seek(-1, 1)
-    if tok == b_('%'):
-        while tok not in (b_('\n'), b_('\r')):
+    if tok == '%':
+        while tok not in ('\n', '\r'):
             tok = stream.read(1)
 
 class ConvertFunctionsToVirtualList(object):
@@ -125,13 +125,13 @@ def RC4_encrypt(key, plaintext):
         j = (j + S[i] + ord_(key[i % len(key)])) % 256
         S[i], S[j] = S[j], S[i]
     i, j = 0, 0
-    retval = b_("")
+    retval = ""
     for x in range(len(plaintext)):
         i = (i + 1) % 256
         j = (j + S[i]) % 256
         S[i], S[j] = S[j], S[i]
         t = S[(S[i] + S[j]) % 256]
-        retval += b_(chr(ord_(plaintext[x]) ^ t))
+        retval += chr(ord_(plaintext[x]) ^ t)
     return retval
 
 def matrixMultiply(a, b):
@@ -168,7 +168,7 @@ class PdfStreamError(PdfReadError):
     pass
 
 
-def b_(s):
+def s:
     if sys.version_info[0] < 3:
         return s
     else:
@@ -223,4 +223,4 @@ def hexStr(num):
     return hex(num).replace('L', '')
 
 
-WHITESPACES = [b_(x) for x in [' ', '\n', '\r', '\t', '\x00']]
+WHITESPACES = [x for x in [' ', '\n', '\r', '\t', '\x00']]
